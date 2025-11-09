@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, Send, Volume2, MessageSquare, BookOpen, Loader2, Sparkles, TrendingUp, Plus, Trash2, Speaker } from "lucide-react";
+import { Home, Send, Volume2, MessageSquare, BookOpen, Loader2, Sparkles, TrendingUp, Plus, Trash2, Speaker, Mic } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -24,6 +24,7 @@ interface ChatSession {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  elevenLabsConversationId?: string; // Store ElevenLabs conversation ID for agent continuity
 }
 
 // Conversation Starters
@@ -78,9 +79,14 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTip, setLoadingTip] = useState("");
   const [audioSpeed, setAudioSpeed] = useState(1);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [elevenLabsConversationId, setElevenLabsConversationId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const tipIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Load chats from local storage on mount
   useEffect(() => {
@@ -94,6 +100,7 @@ const Chat = () => {
           const mostRecent = sessions.sort((a, b) => b.updatedAt - a.updatedAt)[0];
           setCurrentChatId(mostRecent.id);
           setMessages(mostRecent.messages);
+          setElevenLabsConversationId(mostRecent.elevenLabsConversationId || null);
         }
       } catch (error) {
         console.error("Error loading chats from storage:", error);
@@ -114,12 +121,12 @@ const Chat = () => {
       setChatSessions((prev) =>
         prev.map((chat) =>
           chat.id === currentChatId
-            ? { ...chat, messages, updatedAt: Date.now() }
+            ? { ...chat, messages, updatedAt: Date.now(), elevenLabsConversationId: elevenLabsConversationId || undefined }
             : chat
         )
       );
     }
-  }, [messages, currentChatId]);
+  }, [messages, currentChatId, elevenLabsConversationId]);
 
   // Initialize speech synthesis
   useEffect(() => {
@@ -171,6 +178,7 @@ const Chat = () => {
     setCurrentChatId(newChat.id);
     setMessages([]);
     setInput("");
+    setElevenLabsConversationId(null); // Reset conversation ID for new chat
   };
 
   const deleteChat = (chatId: string) => {
@@ -184,6 +192,7 @@ const Chat = () => {
       } else {
         setCurrentChatId(null);
         setMessages([]);
+        setElevenLabsConversationId(null);
       }
     }
   };
@@ -193,6 +202,7 @@ const Chat = () => {
     if (chat) {
       setCurrentChatId(chatId);
       setMessages(chat.messages);
+      setElevenLabsConversationId(chat.elevenLabsConversationId || null);
     }
   };
 
@@ -216,7 +226,75 @@ const Chat = () => {
     return "Climate Science";
   };
 
+  // Determine if CO2 chart should be shown based on question/topic
+  const shouldShowCO2Chart = (question: string, topic: string, response: string): boolean => {
+    const lowerQuestion = question.toLowerCase();
+    const lowerResponse = response.toLowerCase();
+    const combined = `${lowerQuestion} ${lowerResponse}`;
+    
+    // Show CO2 chart ONLY if the question/response is specifically about:
+    // - CO2, carbon dioxide, carbon emissions
+    // - Greenhouse gases (general overview - not specific gases)
+    // - Global warming (temperature/atmospheric CO2 trends)
+    // - Climate change (general CO2/emissions trends)
+    const co2Keywords = [
+      "co2", "carbon dioxide", "carbon emissions", "carbon concentration",
+      "atmospheric co2", "co2 levels", "co2 concentration", "co2 ppm",
+      "carbon ppm", "carbon dioxide levels", "carbon dioxide concentration"
+    ];
+    
+    // General climate keywords that might warrant CO2 chart (but be careful)
+    // Only use these if they're in context of CO2/emissions
+    const generalClimateKeywords = [
+      "greenhouse gas", "greenhouse gases", "global warming", 
+      "climate change"
+    ];
+    
+    // Check for specific CO2 keywords (always show chart)
+    const hasSpecificCO2Keyword = co2Keywords.some(keyword => combined.includes(keyword));
+    
+    // Check for general climate keywords (show chart only if not about specific non-CO2 topics)
+    const hasGeneralClimateKeyword = generalClimateKeywords.some(keyword => combined.includes(keyword));
+    
+    // Don't show for specific topics that aren't CO2-related
+    const nonCO2Topics = [
+      "renewable", "solar", "wind", "energy", "paris", "agreement", "policy",
+      "treaty", "renewable energy", "solar power", "wind power",
+      "cloud", "clouds", "altitude", "altitudes", "weather", "precipitation",
+      "rain", "snow", "temperature", "humidity", "pressure", "atmospheric pressure",
+      "wind speed", "weather pattern", "meteorology", "atmospheric physics"
+    ];
+    const isNonCO2Topic = nonCO2Topics.some(topic => lowerQuestion.includes(topic));
+    
+    // Don't show for questions about specific gases (ozone, methane, HFCs, PFCs, SF6, etc.) 
+    // unless also explicitly about CO2
+    const specificGases = [
+      "ozone", "methane", "nitrous oxide", "hfc", "pfc", "sf6", 
+      "sulfur hexafluoride", "nitrogen trifluoride", "nf3",
+      "hydrofluorocarbon", "perfluorocarbon", "water vapor", "nitrogen", "oxygen"
+    ];
+    const isSpecificGas = specificGases.some(gas => 
+      combined.includes(gas) && !combined.includes("co2") && !combined.includes("carbon dioxide")
+    );
+    
+    // Don't show for atmospheric/weather topics unless specifically about CO2
+    const atmosphericTopics = [
+      "cloud", "clouds", "atmospheric", "atmosphere", "weather", "meteorology",
+      "precipitation", "rain", "snow", "wind", "pressure", "humidity", "temperature"
+    ];
+    const isAtmosphericTopic = atmosphericTopics.some(topic => 
+      combined.includes(topic) && !hasSpecificCO2Keyword && !combined.includes("co2") && !combined.includes("carbon dioxide")
+    );
+    
+    // Show chart ONLY if:
+    // 1. Has specific CO2 keywords, OR
+    // 2. Has general climate keywords AND not about specific non-CO2 topics AND not about specific gases AND not about atmospheric/weather
+    return hasSpecificCO2Keyword || (hasGeneralClimateKeyword && !isNonCO2Topic && !isSpecificGas && !isAtmosphericTopic);
+  };
+
+
   const callAI = async (question: string): Promise<string> => {
+    console.log("🤖 [AGENT CALL] Using Direct Gemini API (via Supabase function)");
     const CHAT_URL = `https://wpgpnrhumhckbbnjnegr.supabase.co/functions/v1/climate-chat`;
     
     const response = await fetch(CHAT_URL, {
@@ -234,7 +312,96 @@ const Chat = () => {
     }
 
     const data = await response.json();
+    console.log("✅ [AGENT CALL] Direct Gemini API response received");
     return data.response;
+  };
+
+  // Call Gemini API directly (same endpoint that ElevenLabs agent webhook uses)
+  const callElevenLabsAgent = async (message: string, conversationId?: string | null): Promise<{ response: string; conversationId: string }> => {
+    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const agentId = import.meta.env.VITE_ELEVENLABS_CLIMATE_AGENT_ID;
+
+    if (!geminiApiKey) {
+      throw new Error("Gemini API key not found. Please add it to your .env file.");
+    }
+
+    console.log(`🤖 [AGENT CALL] Using ElevenLabs Agent (ClimateSage-replies) via Gemini API`);
+    console.log(`   Agent ID: ${agentId}`);
+    console.log(`   Conversation ID: ${conversationId || "NEW"}`);
+    console.log(`   Using Gemini 2.5 Flash (same as agent webhook)`);
+
+    // Use the same Gemini endpoint that the ElevenLabs agent webhook uses
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    
+    // Build conversation history for context (if we have previous messages)
+    const conversationHistory = conversationId ? [] : []; // For now, just send current message
+    // TODO: Could enhance this to include conversation history if needed
+    
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {
+              text: message,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+    };
+
+    console.log(`   Endpoint: POST ${geminiUrl}`);
+    console.log(`   Request Body:`, requestBody);
+
+    try {
+      const response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData: any = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { raw: errorText };
+        }
+        
+        console.error("❌ [AGENT CALL] Gemini API Error Response:");
+        console.error(`   Status: ${response.status} ${response.statusText}`);
+        console.error(`   Error Data:`, errorData);
+        
+        throw new Error(errorData.error?.message || errorData.message || `API error: ${response.status} - ${errorText.substring(0, 200)}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ [AGENT CALL] Gemini API response received:", data);
+      
+      // Extract the response text from Gemini
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        const responseText = data.candidates[0].content.parts[0].text;
+        
+        // Generate or reuse conversation ID
+        const newConversationId = conversationId || `conv_${Date.now()}`;
+        console.log(`   Conversation ID: ${newConversationId}`);
+        
+        return { response: responseText, conversationId: newConversationId };
+      } else {
+        throw new Error("Unexpected response format from Gemini API");
+      }
+    } catch (error) {
+      console.error("❌ [AGENT CALL] Error calling Gemini API:", error);
+      throw error;
+    }
   };
 
   const handleAsk = async () => {
@@ -256,7 +423,7 @@ const Chat = () => {
       const title = question.length > 30 ? question.substring(0, 30) + "..." : question;
       updateChatTitle(currentChatId!, title);
     }
-    
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
@@ -269,19 +436,47 @@ const Chat = () => {
     setIsLoading(true);
 
     try {
-      const response = await callAI(question);
+      // Check if this is the first message in the conversation
+      const currentChat = chatSessions.find((c) => c.id === currentChatId);
+      const isFirstMessage = currentChat && currentChat.messages.length === 0;
+
+      let response: string;
+      let newConversationId: string | null = null;
+
+      if (isFirstMessage) {
+        // First message: use direct Gemini API (callAI)
+        console.log("📝 [CHAT] First message - using Direct Gemini API");
+        response = await callAI(question);
+      } else {
+        // After first message: use ElevenLabs agent
+        console.log("📝 [CHAT] Subsequent message - using ElevenLabs Agent");
+        const agentResponse = await callElevenLabsAgent(question, elevenLabsConversationId);
+        response = agentResponse.response;
+        newConversationId = agentResponse.conversationId;
+        
+        // Update conversation ID if we got a new one
+        if (newConversationId && newConversationId !== elevenLabsConversationId) {
+          console.log(`💾 [CHAT] Saving new conversation ID: ${newConversationId}`);
+          setElevenLabsConversationId(newConversationId);
+        }
+      }
+      
+      // Only show CO2 chart if the topic is actually CO2-related
+      // Don't hardcode charts for other topics - only show when relevant
+      const shouldDisplayChart = shouldShowCO2Chart(question, topic, response);
       
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "assistant",
         text: response,
-        data: "CO₂: 421 ppm",
+        data: shouldDisplayChart ? "CO₂: 421 ppm" : undefined,
         topic,
-        chartData: co2HistoricalData,
+        chartData: shouldDisplayChart ? co2HistoricalData : undefined,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
+      console.error("Error calling AI:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "assistant",
@@ -334,6 +529,109 @@ const Chat = () => {
     utterance.lang = "en-US";
 
     synthRef.current.speak(utterance);
+  };
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await transcribeAudio(audioBlob);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      alert("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID;
+
+    if (!apiKey) {
+      alert("ElevenLabs API key not found. Please add it to your .env file.");
+      return;
+    }
+
+    setIsTranscribing(true);
+
+    try {
+      // Prepare audio for ElevenLabs STT API
+      // The API requires: model_id (scribe_v1 or scribe_v1_experimental) and file parameter
+      const formData = new FormData();
+      formData.append("file", audioBlob, "recording.webm");
+      formData.append("model_id", "scribe_v1"); // Use scribe_v1 as default, can be changed to scribe_v1_experimental
+
+      // Use ElevenLabs Speech-to-Text API
+      const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("ElevenLabs API Error:", errorData);
+        throw new Error(errorData.detail?.message || errorData.message || `API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("ElevenLabs STT Response:", data);
+      
+      // Extract transcribed text from response
+      // Response format: { text: "transcribed text" }
+      const transcribedText = data.text || data.transcript || data.transcription;
+      
+      if (transcribedText) {
+        setInput(transcribedText);
+        // User can review and click "Ask" to send to Gemini
+      } else {
+        console.error("Unexpected response format:", data);
+        alert("Could not extract transcribed text from response. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      alert(
+        error instanceof Error 
+          ? `Speech-to-text failed: ${error.message}` 
+          : "Speech-to-text failed. Please check your ElevenLabs API configuration."
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleTalk = () => {
+    if (isRecording) {
+      handleStopRecording();
+    } else {
+      handleStartRecording();
+    }
   };
 
   const speedOptions = [0.75, 1, 1.25, 1.5];
@@ -448,20 +746,20 @@ const Chat = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   New Chat
                 </Button>
-                <Link to="/">
+          <Link to="/">
                   <Button variant="ghost" size="icon" className="rounded-full">
-                    <Home className="h-5 w-5" />
-                  </Button>
-                </Link>
+              <Home className="h-5 w-5" />
+            </Button>
+          </Link>
               </div>
-            </div>
-          </header>
+        </div>
+      </header>
 
-          {/* Messages Area */}
+      {/* Messages Area */}
           <main className="flex-1 overflow-y-auto px-4 py-8">
             <div className="container mx-auto max-w-4xl">
-              <div className="space-y-6 mb-32">
-                {messages.length === 0 ? (
+        <div className="space-y-6 mb-32">
+          {messages.length === 0 ? (
                   <>
                     {/* Conversation Starters */}
                     <div className="mb-8">
@@ -485,20 +783,20 @@ const Chat = () => {
                           </Card>
                         ))}
                       </div>
-                    </div>
+            </div>
                     <Card className="p-12 text-center">
                       <p className="text-lg text-muted-foreground">Ask me anything about climate change!</p>
                     </Card>
                   </>
-                ) : (
-                  messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <Card
-                        className={`p-5 max-w-[80%] ${
-                          message.type === "user"
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <Card
+                        className={`p-5 max-w-[80%] overflow-visible ${
+                    message.type === "user"
                             ? "bg-primary/20 border-primary/40"
                             : ""
                         }`}
@@ -510,12 +808,75 @@ const Chat = () => {
                             </Badge>
                           </div>
                         )}
-                        <p className="mb-3 text-foreground whitespace-pre-wrap">{message.text}</p>
-                        {message.data && (
+                        <div 
+                          className="mb-3 text-foreground whitespace-pre-wrap prose prose-invert max-w-none break-words overflow-visible"
+                          style={{ lineHeight: '1.6', wordBreak: 'break-word' }}
+                        >
+                          {message.text.split('\n').map((line, idx) => {
+                            // Process markdown formatting in the line
+                            let processedLine = line;
+                            const parts: (string | JSX.Element)[] = [];
+                            
+                            // Handle bold text (**text**)
+                            const boldRegex = /\*\*(.+?)\*\*/g;
+                            let lastIndex = 0;
+                            let match;
+                            
+                            while ((match = boldRegex.exec(line)) !== null) {
+                              // Add text before the bold
+                              if (match.index > lastIndex) {
+                                parts.push(line.substring(lastIndex, match.index));
+                              }
+                              // Add bold text
+                              parts.push(
+                                <strong key={`bold-${idx}-${match.index}`} className="font-semibold">
+                                  {match[1]}
+                                </strong>
+                              );
+                              lastIndex = match.index + match[0].length;
+                            }
+                            
+                            // Add remaining text
+                            if (lastIndex < line.length) {
+                              parts.push(line.substring(lastIndex));
+                            }
+                            
+                            // If no bold found, use original line
+                            if (parts.length === 0) {
+                              parts.push(line);
+                            }
+                            
+                            // Check if line is a bullet point or numbered list
+                            if (/^[\*\-\•]\s/.test(line) || /^\d+\.\s/.test(line)) {
+                              return (
+                                <div key={idx} className="ml-4 mb-1">
+                                  {parts}
+                                </div>
+                              );
+                            }
+                            
+                            // Check if line is a heading (starts with ## or ###)
+                            if (/^#{1,3}\s/.test(line)) {
+                              const level = line.match(/^(#{1,3})/)?.[1].length || 1;
+                              const headingText = line.replace(/^#{1,3}\s/, '');
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`mb-2 font-bold ${level === 1 ? 'text-lg' : level === 2 ? 'text-base' : 'text-sm'}`}
+                                >
+                                  {headingText}
+                                </div>
+                              );
+                            }
+                            
+                            return <div key={idx} className="mb-1">{parts}</div>;
+                          })}
+                        </div>
+                  {message.data && (
                           <div className="mt-4 pt-4 border-t border-border/30">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-accent glass"></div>
-                              <p className="text-sm font-semibold text-accent">{message.data}</p>
+                      <p className="text-sm font-semibold text-accent">{message.data}</p>
                             </div>
                           </div>
                         )}
@@ -558,9 +919,9 @@ const Chat = () => {
                                 </LineChart>
                               </ResponsiveContainer>
                             </div>
-                          </div>
-                        )}
-                        {message.audioUrl && (
+                    </div>
+                  )}
+                  {message.audioUrl && (
                           <div className="mt-4 pt-4 border-t border-border/30">
                             <div className="glass-audio p-3 rounded-xl">
                               <div className="flex items-center justify-between mb-2">
@@ -588,15 +949,15 @@ const Chat = () => {
                                 className="w-full"
                                 style={{ display: 'block' }}
                               >
-                                <source src={message.audioUrl} type="audio/mpeg" />
-                              </audio>
+                        <source src={message.audioUrl} type="audio/mpeg" />
+                      </audio>
                             </div>
-                          </div>
-                        )}
-                      </Card>
                     </div>
-                  ))
-                )}
+                  )}
+                </Card>
+              </div>
+            ))
+          )}
                 
                 {/* Loading State */}
                 {isLoading && (
@@ -618,21 +979,36 @@ const Chat = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </main>
+        </div>
+      </main>
 
           {/* Input Area - Fixed at bottom with Glassmorphic */}
           <div className="glass-strong border-t border-border/30 py-4 z-50">
             <div className="container mx-auto px-4 max-w-4xl">
               <div className="flex gap-3">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAsk()}
-                  placeholder="Ask about climate change..."
-                  className="flex-1"
+              placeholder="Ask about climate change..."
+              className="flex-1"
                   disabled={isLoading}
                 />
+                <Button 
+                  onClick={handleTalk}
+                  variant="outline"
+                  size="lg"
+                  className={`text-foreground hover:text-accent ${isRecording ? "bg-destructive/20 border-destructive/40" : ""}`}
+                  disabled={isLoading || isTranscribing}
+                  title={isRecording ? "Click to stop recording" : "Click to start voice input"}
+                >
+                  {isTranscribing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mic className={`h-4 w-4 mr-2 ${isRecording ? "text-destructive animate-pulse" : ""}`} />
+                  )}
+                  {isRecording ? "Stop" : isTranscribing ? "Transcribing..." : "Talk"}
+                </Button>
                 <Button 
                   onClick={handleSpeak}
                   variant="outline"
@@ -654,14 +1030,14 @@ const Chat = () => {
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4 mr-2" />
+              <Send className="h-4 w-4 mr-2" />
                   )}
-                  Ask
-                </Button>
-              </div>
-            </div>
+              Ask
+            </Button>
           </div>
         </div>
+      </div>
+    </div>
       </div>
     </SidebarProvider>
   );
