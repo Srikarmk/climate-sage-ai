@@ -494,28 +494,20 @@ const Chat = () => {
   };
 
   const transcribeAudio = async (audioBlob: Blob) => {
-    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID;
-
-    if (!apiKey) {
-      alert("ElevenLabs API key not found. Please add it to your .env file.");
-      return;
-    }
-
     setIsTranscribing(true);
 
     try {
-      // Prepare audio for ElevenLabs STT API
-      // The API requires: model_id (scribe_v1 or scribe_v1_experimental) and file parameter
+      // Prepare audio for edge function
       const formData = new FormData();
       formData.append("file", audioBlob, "recording.webm");
-      formData.append("model_id", "scribe_v1"); // Use scribe_v1 as default, can be changed to scribe_v1_experimental
+      formData.append("model_id", "scribe_v1");
 
-      // Use ElevenLabs Speech-to-Text API
-      const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+      // Call speech-to-text edge function
+      const STT_URL = `https://wpgpnrhumhckbbnjnegr.supabase.co/functions/v1/speech-to-text`;
+      const response = await fetch(STT_URL, {
         method: "POST",
         headers: {
-          "xi-api-key": apiKey,
+          "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZ3Bucmh1bWhja2JibmpuZWdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTk5MjcsImV4cCI6MjA3ODE5NTkyN30.fly2rfm41VFRIR1R0PulpdwSLkLja51DX01u-k2v9fk`,
         },
         body: formData,
       });
