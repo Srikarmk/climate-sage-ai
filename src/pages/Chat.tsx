@@ -217,13 +217,13 @@ const Chat = () => {
   };
 
   const callAI = async (question: string): Promise<string> => {
-    const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/climate-chat`;
+    const CHAT_URL = `https://wpgpnrhumhckbbnjnegr.supabase.co/functions/v1/climate-chat`;
     
     const response = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZ3Bucmh1bWhja2JibmpuZWdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTk5MjcsImV4cCI6MjA3ODE5NTkyN30.fly2rfm41VFRIR1R0PulpdwSLkLja51DX01u-k2v9fk`,
       },
       body: JSON.stringify({ message: question }),
     });
