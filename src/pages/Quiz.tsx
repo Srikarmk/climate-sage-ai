@@ -138,96 +138,25 @@ const Quiz = () => {
     }
   }, [isGenerating]);
 
-  const callGeminiAPI = async (prompt: string): Promise<string> => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("Gemini API key not found. Please add VITE_GEMINI_API_KEY to your .env file");
+  const callQuizAPI = async (prompt: string): Promise<string> => {
+    const QUIZ_URL = `https://wpgpnrhumhckbbnjnegr.supabase.co/functions/v1/generate-quiz`;
+    
+    const response = await fetch(QUIZ_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZ3Bucmh1bWhja2JibmpuZWdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTk5MjcsImV4cCI6MjA3ODE5NTkyN30.fly2rfm41VFRIR1R0PulpdwSLkLja51DX01u-k2v9fk`,
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
-    const modelConfigs = [
-      { model: "gemini-2.0-flash-exp", version: "v1beta" },
-      { model: "gemini-2.0-flash-lite", version: "v1" },
-      { model: "gemini-1.5-flash", version: "v1" },
-      { model: "gemini-pro", version: "v1" },
-    ];
-
-    const systemPrompt = `You are a climate education quiz generator. Generate exactly 5 multiple-choice questions about climate change based on the user's prompt.
-
-Return ONLY a valid JSON array with this exact structure (no markdown, no code blocks, just pure JSON):
-[
-  {
-    "question": "Question text here",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": 0,
-    "explanation": "Brief explanation of why this answer is correct"
-  },
-  ...
-]
-
-Rules:
-- Generate exactly 5 questions
-- Each question must have exactly 4 options
-- correctAnswer is the index (0-3) of the correct option - MUST be a valid index (0, 1, 2, or 3)
-- Make questions educational and relevant to climate change
-- If the user's prompt is vague, create questions about general climate science
-- Ensure explanations are clear and educational
-- IMPORTANT: Verify that correctAnswer matches one of the options indices (0-3)
-- Ensure all options are distinct and plausible
-
-User prompt: ${prompt || "general climate change topics"}`;
-
-    let lastError: Error | null = null;
-
-    for (const config of modelConfigs) {
-      try {
-        console.log(`🔄 Trying Gemini model: ${config.model} (API version: ${config.version})`);
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: systemPrompt,
-                    },
-                  ],
-                },
-              ],
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2048,
-              },
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          lastError = new Error(errorData.error?.message || `API error: ${response.status}`);
-          continue;
-        }
-
-        const data = await response.json();
-        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-          console.log(`✅ Using Gemini model: ${config.model} (API version: ${config.version})`);
-          return data.candidates[0].content.parts[0].text;
-        }
-        throw new Error("Unexpected response format from Gemini API");
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`Failed with model ${config.model}, trying next...`, error);
-        continue;
-      }
-    }
-
-    throw lastError || new Error("All Gemini models failed. Please check your API key and available models.");
+    const data = await response.json();
+    return data.questions;
   };
 
   const handleGenerateQuiz = async () => {
@@ -246,7 +175,7 @@ User prompt: ${prompt || "general climate change topics"}`;
     setShowResult(false);
 
     try {
-      const response = await callGeminiAPI(quizPrompt);
+      const response = await callQuizAPI(quizPrompt);
       
       // Clean the response - remove markdown code blocks if present
       let cleanedResponse = response.trim();

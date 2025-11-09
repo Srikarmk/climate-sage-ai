@@ -316,92 +316,18 @@ const Chat = () => {
     return data.response;
   };
 
-  // Call Gemini API directly (same endpoint that ElevenLabs agent webhook uses)
+  // Use the climate-chat edge function for all AI responses
   const callElevenLabsAgent = async (message: string, conversationId?: string | null): Promise<{ response: string; conversationId: string }> => {
-    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const agentId = import.meta.env.VITE_ELEVENLABS_CLIMATE_AGENT_ID;
-
-    if (!geminiApiKey) {
-      throw new Error("Gemini API key not found. Please add it to your .env file.");
-    }
-
-    console.log(`🤖 [AGENT CALL] Using ElevenLabs Agent (ClimateSage-replies) via Gemini API`);
-    console.log(`   Agent ID: ${agentId}`);
+    console.log(`🤖 [AGENT CALL] Using climate-chat edge function`);
     console.log(`   Conversation ID: ${conversationId || "NEW"}`);
-    console.log(`   Using Gemini 2.5 Flash (same as agent webhook)`);
 
-    // Use the same Gemini endpoint that the ElevenLabs agent webhook uses
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const response = await callAI(message);
     
-    // Build conversation history for context (if we have previous messages)
-    const conversationHistory = conversationId ? [] : []; // For now, just send current message
-    // TODO: Could enhance this to include conversation history if needed
+    // Generate or reuse conversation ID
+    const newConversationId = conversationId || `conv_${Date.now()}`;
+    console.log(`   Conversation ID: ${newConversationId}`);
     
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: message,
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-    };
-
-    console.log(`   Endpoint: POST ${geminiUrl}`);
-    console.log(`   Request Body:`, requestBody);
-
-    try {
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData: any = {};
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { raw: errorText };
-        }
-        
-        console.error("❌ [AGENT CALL] Gemini API Error Response:");
-        console.error(`   Status: ${response.status} ${response.statusText}`);
-        console.error(`   Error Data:`, errorData);
-        
-        throw new Error(errorData.error?.message || errorData.message || `API error: ${response.status} - ${errorText.substring(0, 200)}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ [AGENT CALL] Gemini API response received:", data);
-      
-      // Extract the response text from Gemini
-      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-        const responseText = data.candidates[0].content.parts[0].text;
-        
-        // Generate or reuse conversation ID
-        const newConversationId = conversationId || `conv_${Date.now()}`;
-        console.log(`   Conversation ID: ${newConversationId}`);
-        
-        return { response: responseText, conversationId: newConversationId };
-      } else {
-        throw new Error("Unexpected response format from Gemini API");
-      }
-    } catch (error) {
-      console.error("❌ [AGENT CALL] Error calling Gemini API:", error);
-      throw error;
-    }
+    return { response, conversationId: newConversationId };
   };
 
   const handleAsk = async () => {
