@@ -216,79 +216,25 @@ const Chat = () => {
     return "Climate Science";
   };
 
-  const callGeminiAPI = async (question: string): Promise<string> => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const callAI = async (question: string): Promise<string> => {
+    const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/climate-chat`;
     
-    if (!apiKey) {
-      throw new Error("Gemini API key not found. Please add VITE_GEMINI_API_KEY to your .env file");
+    const response = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ message: question }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
-    // Try different model names and API versions
-    const modelConfigs = [
-      { model: "gemini-2.0-flash-exp", version: "v1beta" },
-      { model: "gemini-2.0-flash-lite", version: "v1" },
-      { model: "gemini-1.5-flash", version: "v1" },
-      { model: "gemini-pro", version: "v1" },
-    ];
-
-    const prompt = `You are a climate education assistant. Answer this question about climate change in a clear, educational, and engaging way. Keep it concise (2-3 paragraphs). Include relevant data when appropriate. Current CO₂ level: 421 ppm.
-
-Question: ${question}`;
-
-    let lastError: Error | null = null;
-
-    for (const config of modelConfigs) {
-      try {
-        console.log(`🔄 Trying Gemini model: ${config.model} (API version: ${config.version})`);
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: prompt,
-                    },
-                  ],
-                },
-              ],
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-              },
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          lastError = new Error(errorData.error?.message || `API error: ${response.status}`);
-          continue; // Try next model
-        }
-
-        const data = await response.json();
-        // Gemini API returns text in candidates[0].content.parts[0].text
-        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-          console.log(`✅ Using Gemini model: ${config.model} (API version: ${config.version})`);
-          return data.candidates[0].content.parts[0].text;
-        }
-        throw new Error("Unexpected response format from Gemini API");
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`Failed with model ${config.model}, trying next...`, error);
-        continue; // Try next model
-      }
-    }
-
-    // If all models failed, throw the last error
-    throw lastError || new Error("All Gemini models failed. Please check your API key and available models.");
+    const data = await response.json();
+    return data.response;
   };
 
   const handleAsk = async () => {
@@ -323,7 +269,7 @@ Question: ${question}`;
     setIsLoading(true);
 
     try {
-      const response = await callGeminiAPI(question);
+      const response = await callAI(question);
       
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
