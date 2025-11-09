@@ -8,6 +8,7 @@ const Index = () => {
     <div className="min-h-screen gradient-animated relative overflow-hidden">
       {/* Hero Section */}
       <section className="min-h-screen flex items-center justify-center px-4 py-12 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent"></div>
         <div className="text-center max-w-4xl mx-auto relative z-10">
           {/* Logo/Icon - Clean with Depth */}
           <div className="mb-8 flex justify-center">
@@ -52,35 +53,41 @@ const Index = () => {
             </Link>
           </div>
 
-          {/* Features - Clean Interactive Cards with Depth */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
-            <Card className="p-6 glass-card-dark whimsical-card depth-shadow depth-glow">
-              <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <Brain className="w-6 h-6 text-accent" />
+          {/* Features - Horizontal Layout with Icons */}
+          <div className="flex flex-col md:flex-row gap-4 mt-16 justify-center items-center">
+            <div className="flex items-center gap-3 px-6 py-4 glass-card-dark rounded-xl depth-shadow">
+              <div className="w-10 h-10 glass rounded-lg flex items-center justify-center depth-shadow">
+                <Brain className="w-5 h-5 text-accent" />
               </div>
-              <h3 className="font-semibold text-lg mb-2 text-foreground">AI-Powered Learning</h3>
-              <p className="text-sm text-muted-foreground">Ask questions and get instant, accurate answers about climate change</p>
-            </Card>
-            <Card className="p-6 glass-card-dark whimsical-card depth-shadow depth-glow">
-              <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <BarChart3 className="w-6 h-6 text-accent" />
+              <div className="text-left">
+                <h3 className="font-semibold text-sm text-foreground">AI-Powered</h3>
+                <p className="text-xs text-muted-foreground">Instant answers</p>
               </div>
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Interactive Quizzes</h3>
-              <p className="text-sm text-muted-foreground">Test your knowledge with engaging climate science questions</p>
-            </Card>
-            <Card className="p-6 glass-card-dark whimsical-card depth-shadow depth-glow">
-              <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <Database className="w-6 h-6 text-accent" />
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 glass-card-dark rounded-xl depth-shadow">
+              <div className="w-10 h-10 glass rounded-lg flex items-center justify-center depth-shadow">
+                <BarChart3 className="w-5 h-5 text-accent" />
               </div>
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Data-Driven</h3>
-              <p className="text-sm text-muted-foreground">Learn with real climate data and scientific facts</p>
-            </Card>
+              <div className="text-left">
+                <h3 className="font-semibold text-sm text-foreground">Interactive</h3>
+                <p className="text-xs text-muted-foreground">Engaging quizzes</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 glass-card-dark rounded-xl depth-shadow">
+              <div className="w-10 h-10 glass rounded-lg flex items-center justify-center depth-shadow">
+                <Database className="w-5 h-5 text-accent" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-sm text-foreground">Data-Driven</h3>
+                <p className="text-xs text-muted-foreground">Real facts</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 px-4 relative">
+      <section className="py-20 px-4 relative bg-gradient-to-b from-transparent via-accent/5 to-transparent border-y border-border/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
@@ -91,46 +98,55 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="p-8 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow">
-                <MessageSquare className="w-8 h-8 text-accent" />
-              </div>
-              <div className="w-8 h-8 rounded-full bg-accent/20 text-accent font-bold flex items-center justify-center mx-auto mb-4">
-                1
-              </div>
-              <h3 className="font-bold text-xl mb-3 text-foreground">Ask Questions</h3>
-              <p className="text-sm text-muted-foreground">
-                Start a conversation with our AI teacher. Ask anything about climate change, 
-                renewable energy, or environmental science.
-              </p>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Connecting Line for Desktop */}
+            <div className="hidden md:block absolute top-24 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent/30 to-transparent"></div>
+            
+            <div className="relative">
+              <Card className="p-8 glass-strong depth-shadow depth-glow text-center border-2 border-accent/20">
+                <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow bg-accent/10">
+                  <MessageSquare className="w-8 h-8 text-accent" />
+                </div>
+                <div className="w-10 h-10 rounded-full bg-accent/30 text-accent font-bold flex items-center justify-center mx-auto mb-4 text-lg">
+                  1
+                </div>
+                <h3 className="font-bold text-xl mb-3 text-foreground">Ask Questions</h3>
+                <p className="text-sm text-muted-foreground">
+                  Start a conversation with our AI teacher. Ask anything about climate change, 
+                  renewable energy, or environmental science.
+                </p>
+              </Card>
+            </div>
 
-            <Card className="p-8 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow">
-                <Lightbulb className="w-8 h-8 text-accent" />
-              </div>
-              <div className="w-8 h-8 rounded-full bg-accent/20 text-accent font-bold flex items-center justify-center mx-auto mb-4">
-                2
-              </div>
-              <h3 className="font-bold text-xl mb-3 text-foreground">Learn & Understand</h3>
-              <p className="text-sm text-muted-foreground">
-                Get comprehensive, easy-to-understand explanations backed by scientific data.
-              </p>
-            </Card>
+            <div className="relative">
+              <Card className="p-8 glass-strong depth-shadow depth-glow text-center border-2 border-accent/20">
+                <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow bg-accent/10">
+                  <Lightbulb className="w-8 h-8 text-accent" />
+                </div>
+                <div className="w-10 h-10 rounded-full bg-accent/30 text-accent font-bold flex items-center justify-center mx-auto mb-4 text-lg">
+                  2
+                </div>
+                <h3 className="font-bold text-xl mb-3 text-foreground">Learn & Understand</h3>
+                <p className="text-sm text-muted-foreground">
+                  Get comprehensive, easy-to-understand explanations backed by scientific data.
+                </p>
+              </Card>
+            </div>
 
-            <Card className="p-8 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow">
-                <Target className="w-8 h-8 text-accent" />
-              </div>
-              <div className="w-8 h-8 rounded-full bg-accent/20 text-accent font-bold flex items-center justify-center mx-auto mb-4">
-                3
-              </div>
-              <h3 className="font-bold text-xl mb-3 text-foreground">Test Your Knowledge</h3>
-              <p className="text-sm text-muted-foreground">
-                Take personalized quizzes to reinforce your learning and track your progress over time.
-              </p>
-            </Card>
+            <div className="relative">
+              <Card className="p-8 glass-strong depth-shadow depth-glow text-center border-2 border-accent/20">
+                <div className="w-16 h-16 glass rounded-full flex items-center justify-center mb-6 mx-auto depth-shadow bg-accent/10">
+                  <Target className="w-8 h-8 text-accent" />
+                </div>
+                <div className="w-10 h-10 rounded-full bg-accent/30 text-accent font-bold flex items-center justify-center mx-auto mb-4 text-lg">
+                  3
+                </div>
+                <h3 className="font-bold text-xl mb-3 text-foreground">Test Your Knowledge</h3>
+                <p className="text-sm text-muted-foreground">
+                  Take personalized quizzes to reinforce your learning and track your progress over time.
+                </p>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
@@ -147,47 +163,43 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="p-6 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-14 h-14 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <TrendingUp className="w-7 h-7 text-accent" />
-              </div>
-              <h3 className="font-bold text-2xl mb-2 text-accent">421 ppm</h3>
-              <p className="text-sm text-muted-foreground">Current CO₂ levels in the atmosphere</p>
-            </Card>
+          {/* Statistics Grid - Compact Design */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div className="p-6 glass rounded-xl depth-shadow text-center hover:scale-105 transition-transform">
+              <TrendingUp className="w-10 h-10 text-accent mx-auto mb-3" />
+              <h3 className="font-bold text-3xl mb-1 text-accent">421</h3>
+              <p className="text-xs text-muted-foreground">ppm CO₂</p>
+            </div>
 
-            <Card className="p-6 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-14 h-14 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <Globe className="w-7 h-7 text-accent" />
-              </div>
-              <h3 className="font-bold text-2xl mb-2 text-accent">1.5°C</h3>
-              <p className="text-sm text-muted-foreground">Target limit for global warming increase</p>
-            </Card>
+            <div className="p-6 glass rounded-xl depth-shadow text-center hover:scale-105 transition-transform">
+              <Globe className="w-10 h-10 text-accent mx-auto mb-3" />
+              <h3 className="font-bold text-3xl mb-1 text-accent">1.5°C</h3>
+              <p className="text-xs text-muted-foreground">Target limit</p>
+            </div>
 
-            <Card className="p-6 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-14 h-14 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <Zap className="w-7 h-7 text-accent" />
-              </div>
-              <h3 className="font-bold text-2xl mb-2 text-accent">30%</h3>
-              <p className="text-sm text-muted-foreground">CO₂ absorbed by oceans annually</p>
-            </Card>
+            <div className="p-6 glass rounded-xl depth-shadow text-center hover:scale-105 transition-transform">
+              <Zap className="w-10 h-10 text-accent mx-auto mb-3" />
+              <h3 className="font-bold text-3xl mb-1 text-accent">30%</h3>
+              <p className="text-xs text-muted-foreground">Ocean absorption</p>
+            </div>
 
-            <Card className="p-6 glass-card-dark depth-shadow depth-glow text-center">
-              <div className="w-14 h-14 glass rounded-lg flex items-center justify-center mb-4 mx-auto depth-shadow">
-                <Users className="w-7 h-7 text-accent" />
-              </div>
-              <h3 className="font-bold text-2xl mb-2 text-accent">97%</h3>
-              <p className="text-sm text-muted-foreground">Of climate scientists agree on human impact</p>
-            </Card>
+            <div className="p-6 glass rounded-xl depth-shadow text-center hover:scale-105 transition-transform">
+              <Users className="w-10 h-10 text-accent mx-auto mb-3" />
+              <h3 className="font-bold text-3xl mb-1 text-accent">97%</h3>
+              <p className="text-xs text-muted-foreground">Scientific consensus</p>
+            </div>
           </div>
 
+          {/* Call to Action - Different Style */}
           <div className="mt-12 text-center">
-            <Card className="p-8 glass-card-dark depth-shadow depth-glow max-w-3xl mx-auto">
-              <Award className="w-12 h-12 text-accent mx-auto mb-4" />
-              <h3 className="font-bold text-2xl mb-4 text-foreground">
+            <div className="p-10 glass-strong rounded-2xl depth-shadow depth-glow max-w-3xl mx-auto border-2 border-accent/20">
+              <div className="w-16 h-16 glass rounded-full flex items-center justify-center mx-auto mb-6 bg-accent/10">
+                <Award className="w-8 h-8 text-accent" />
+              </div>
+              <h3 className="font-bold text-3xl mb-4 text-foreground">
                 Knowledge is Power
               </h3>
-              <p className="text-base text-muted-foreground mb-6">
+              <p className="text-base text-muted-foreground mb-8 max-w-xl mx-auto">
                 Climate literacy empowers individuals to make informed decisions, 
                 advocate for sustainable policies, and contribute to global solutions. 
                 Every educated person becomes a catalyst for positive change.
@@ -201,7 +213,7 @@ const Index = () => {
                   Start Your Journey
                 </Button>
               </Link>
-            </Card>
+            </div>
           </div>
         </div>
       </section>

@@ -239,6 +239,7 @@ Question: ${question}`;
 
     for (const config of modelConfigs) {
       try {
+        console.log(`🔄 Trying Gemini model: ${config.model} (API version: ${config.version})`);
         const response = await fetch(
           `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${apiKey}`,
           {
@@ -275,6 +276,7 @@ Question: ${question}`;
         const data = await response.json();
         // Gemini API returns text in candidates[0].content.parts[0].text
         if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+          console.log(`✅ Using Gemini model: ${config.model} (API version: ${config.version})`);
           return data.candidates[0].content.parts[0].text;
         }
         throw new Error("Unexpected response format from Gemini API");

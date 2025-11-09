@@ -46,13 +46,13 @@ Dark Neumorphism with Climate Theme - Deep blues, greens, earth tones
     --radius: 1rem;
 
     /* Climate Gradients - Evening Sky Mixed with Greens and Blues */
-    /* Landing Page - Darker Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(205 87% 20%) 0%, hsl(185 84% 25%) 50%, hsl(152 76% 30%) 100%);
+    /* Unified gradient for all pages */
+    --gradient-hero: linear-gradient(135deg, hsl(205 40% 28%) 0%, hsl(200 45% 30%) 50%, hsl(195 50% 32%) 100%);
     --gradient-card: linear-gradient(to bottom, hsl(200 35% 18%), hsl(195 40% 15%));
-    --gradient-climate: linear-gradient(135deg, hsl(205 87% 20%) 0%, hsl(185 84% 25%) 50%, hsl(152 76% 30%) 100%);
-    --gradient-evening: linear-gradient(135deg, hsl(205 50% 18%) 0%, hsl(200 60% 22%) 50%, hsl(195 70% 26%) 100%);
-    /* Chat/Quiz - Lighter Gradients */
-    --gradient-page: linear-gradient(135deg, hsl(205 40% 25%) 0%, hsl(200 45% 28%) 50%, hsl(195 50% 30%) 100%);
+    --gradient-climate: linear-gradient(135deg, hsl(205 40% 28%) 0%, hsl(200 45% 30%) 50%, hsl(195 50% 32%) 100%);
+    --gradient-evening: linear-gradient(135deg, hsl(205 40% 28%) 0%, hsl(200 45% 30%) 50%, hsl(195 50% 32%) 100%);
+    /* Chat/Quiz - Same as landing page */
+    --gradient-page: linear-gradient(135deg, hsl(205 40% 28%) 0%, hsl(200 45% 30%) 50%, hsl(195 50% 32%) 100%);
     --gradient-page-light: linear-gradient(135deg, hsl(205 40% 28%) 0%, hsl(200 45% 30%) 50%, hsl(195 50% 32%) 100%);
     
     /* Glassmorphic Styles */
@@ -357,7 +357,7 @@ Dark Neumorphism with Climate Theme - Deep blues, greens, earth tones
     animation: scale-bounce 2s ease-in-out infinite;
   }
 
-  /* Animated Gradient - Darker for Landing */
+  /* Animated Gradient - Darker for Landing Page */
   .gradient-animated {
     background: linear-gradient(
       135deg,
